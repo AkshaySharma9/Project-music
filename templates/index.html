@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+
+{% block title %}
+   Music Recommendation Application
+{% endblock %}
+
+{% block main %}
+	<div class="homepage"> </div>
+		
+	{% if session.user_id %}
+	<span id="logged" style="size: 0px;color: white;">{{ session.user_id}}</span>
+	{% endif %}
+{% endblock %}
+

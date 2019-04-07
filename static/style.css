@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css?family=Ubuntu');
+
+.homepage {
+text-align : center;
+padding: 25px;
+}
+
+.songbox {
+margin:15px;
+padding:5px 0pc 30px 0px;
+background-color:aliceblue;
+position:relative;
+}
+
+.song {
+font-family: 'Ubuntu', sans-serif;
+}
+
+.feedback {
+padding:0px 150px 0px 150px;
+}
+
+.liked:hover {
+	color:#da9619;
+	-webkit-transform: scale(1.1);
+	transition: -webkit-transform .25s ease-in-out;
+	cursor: pointer;
+}
+
+
+
+/* login modal */
+.fform {
+    width: auto;
+    padding: inherit;
+}
+
+.modal-header, .close {
+    background-color: rgb(255,82,82);
+    color: white !important;
+    text-align: center;
+    font-size: 40px;
+}
+
+.modal-footer {
+    background-color: #f9f9f9;
+}
