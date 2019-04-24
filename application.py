@@ -23,13 +23,14 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
+# connecting to the Database
 db = sqlite3.connect("data//database.db")
 
 @app.route("/")
 def index():
 	""" Show logged in user the welcome page """
-
 	return render_template("index.html")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -62,6 +63,7 @@ def login():
 
     # redirect user to home page
     return redirect(url_for("index"))
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -119,39 +121,63 @@ def register():
     else:
         return render_template("register.html")
 
+
+@app.route("/logout")
+def logout():
+    """Log user out."""
+
+    # forget any user_id
+    session.clear()
+
+    # redirect user to login form
+    return render_template("logout.html")
+
+
 """
 Gives back the 20 recommended song for the user in json
 """
 @app.route("/getSonglist", methods = ["GET"])
 def getSonglist():
 	# get the userid and check the interation
-	user = request.form.get("uid")
+	user = request.args.get("uid")
 
 	query = "Select * FROM user_data WHERE u_id = '{user}';".format(user = user)
 	rows = db.execute(query).fetchall()
 
+    # number of songs user had interacted
 	songs_interacted = len(rows)
 
-
 	songs_list = []
+	songs_liked = set()
+	songs_disliked = set()
+
+    # storing the song_id of song user liked and disliked
+	for row in rows:
+		if row[2] == 2:
+			songs_disliked.add(row[1])
+		else:
+			songs_liked.add(row[1])
+
 	reader = ''
 
-	# TODO : if user is new show songs based on popularity
-	if songs_interacted < 2:
-		with open("data//popular_songs.txt", "r") as file:
-			i = 0
-			for line in file:
-				songs_list.append(line.strip())
-				i += 1
-				if i >= 20:
-					break
-		reader = [{"s_id": item, "title": item} for item in songs_list if item]
+	#  if user is new show songs based on popularity
+	if songs_interacted < 9:
+		query = "SELECT * FROM tracks_details WHERE t_id < 50"
+		rows = db.execute(query).fetchall()
 
-	# TODO : If user have given feedback for less then 20 songs show songs by collaborative filtering
+		for row in rows:
+			if not row[1] in songs_disliked:
+				songs_list.append([ row[1], row[2], row[3]])
+		reader = [{"s_id": item[0], "artist" : item[1], "title": item[2]} for item in songs_list if item]
 
-	# TODO : else show similiar songs on basis of the feedback
+	else:
+        # else show similiar songs on basis of the feedback of songs rated by user
+		import KNN
+		songs = KNN.getRecommendedSongs(songs_liked)
+		reader = [{"s_id": item[0], "artist" : item[2], "title": item[1]} for item in songs if item and item[0] not in songs_disliked]
 
 	return jsonify(reader)
+
 
 """
 Gets the feedback of user for a song
@@ -159,13 +185,70 @@ and save it to db
 """
 @app.route("/getFeedback", methods=["GET"])
 def saveFeedback():
-	u_id = request.form.get("uid")
-	song_id = request.form.get("s_id")
-	feedback = request.form.get("feedback")
+	u_id = request.args.get("uid")
+	song_id = request.args.get("s_id")
+	feedback = request.args.get("feedback")
 
-	query = "INSERT INTO user_data(u_id, song_id, feedback, play_count) VALUES('{uid}', '{song}', '{feedb}', '1')".format(uid=u_id, song=song_id, feedb=feedback)
-	db.execute(query)
-	db.commit()
+	# check wether user had previously rated the song or not
+	query = "SELECT feedback, play_count FROM user_data WHERE u_id = {uid} AND song_id = '{sid}'".format(uid = u_id, sid = song_id)
+	row = db.execute(query).fetchone()
+	if row:
+		# if old feedback matches new one
+		if row[0] == feedback:
+			# update the play count
+			query = "UPDATE user_data SET play_count = play_count + 1 WHERE u_id = {uid} AND song_id = '{sid}'".format(uid = u_id, sid = song_id)
+			db.execute(query)
+		else:
+			query = "UPDATE user_data SET feedback = {fb} WHERE u_id = {uid} AND song_id = '{sid}'".format(fb = feedback, uid = u_id, sid = song_id)
+			db.execute(query)
+	else:
+		# its a new song of user save it
+		query = "INSERT INTO user_data(u_id, song_id, feedback, play_count) VALUES('{uid}', '{song}', '{feedb}', '1')".format(uid=u_id, song=song_id, feedb=feedback)
+		db.execute(query)
+		db.commit()
 
-	return jsonify("success")
+	return jsonify("Saved")
 
+
+@app.route("/getUserSongs", methods=["GET"])
+def getUserSongs():
+	"""
+	Returns list of songs user liked
+	"""
+	u_id = session["user_id"]
+	query = "SELECT DISTINCT track_id, artist, title FROM tracks_details WHERE track_id IN (SELECT song_id FROM user_data WHERE u_id = '{uid}' AND feedback=3)".format(uid = u_id)
+	rows = db.execute(query).fetchall()
+
+	songs = [{"s_id": item[0], "artist" : item[1], "title": item[2]} for item in rows if item]
+	print(songs)
+	return render_template("songs.html", songs = songs)
+
+
+@app.route("/settings", methods=["GET", "POST"])
+def settings():
+    if request.method == 'POST':
+        # query database for username
+        rows = db.execute("SELECT * FROM user_info WHERE u_id = {uid}".format([session["user_id"]])).fetchone()
+
+        # ensure password is correct
+        if len(rows) != 1 or not request.form.get("oldpass") ==  rows[3]:
+            
+            return redirect(url_for("settings"))
+
+        # ensure the new password aren't blank
+        if request.form.get("newpass") is '' or request.form.get("newpassr") is '':
+            
+            return redirect(url_for("settings"))
+
+        # ensure the new password are same
+        if (request.form.get("newpass")) != request.form.get("newpassr"):
+            
+            return redirect(url_for("settings"))
+
+        # updating the password field
+        
+        db.execute("UPDATE user_info SET pwd = {newp}".format(newp = request.form.get("newpass"))).commit()
+
+        return redirect(url_for("index"))
+    else:
+        return render_template("settings.html")

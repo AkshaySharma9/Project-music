@@ -35,11 +35,19 @@
                     </div>
 
                         {% if session.uname %}
+                            <ul class="nav navbar-nav navbar-right">
+                                <li class="dropdown">
+                  <a class="dropdown-toggle" data-toggle="dropdown" href="#"><span class="glyphicon glyphicon-user"></span> Hi {{ session.uname }}
+                
+                                        <ul class="dropdown-menu">
+                                            <li><a href="{{ url_for('logout') }}">Log Out</a></li>
+                                            <li><a href="{{ url_for('getUserSongs') }}">Your Songs</a></li>
+                                            <li><a href="{{ url_for('settings') }}">Change Password</a></li>
+                                          </ul>
 
-                            <span id="logged_in" class="nav navbar-nav navbar-right">
-                                 Hi {{ session.uname }}!
+                                </li>
 
-                            </span>
+                            </ul>
                         {% else %}
                             <span class="nav navbar-nav navbar-right">
                                 <ul class="nav navbar-nav">
@@ -74,7 +82,7 @@
 
                 <div class="modal-header" style="padding:30px 40px;">
                   <button type="button" class="close" data-dismiss="modal">&times;</button>
-                  <h4 style="font-size: largE; font-family: 'Josefin Sans', sans-serif;"><span class="glyphicon glyphicon-log-in"></span> Login</h4>
+                  <h4 style="font-size: largE; font-family: 'Josefin Sans', sans-serif;"><span class="glyphicon glyphicon-log-in"></span></h4>
                 </div>
 
                 <div class="modal-body" style="padding:40px 20px;">

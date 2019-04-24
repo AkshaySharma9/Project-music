@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Your Songs
+{% endblock %}
+
+{% block main %}
+<h2 style='color:white'> These are the songs you liked: </h2>
+
+    {% for item in songs %}
+                <div class='songbox' style="padding-left:5%;">
+                    <div class='song' id= {{item['s_id']}} > 
+                                {{item['title']}}  <br>
+                        <span class = 'artist'>{{item['artist']}} </span>
+                    </div>
+                </div>
+                
+            {% endfor  %}
+  
+{% endblock %}
